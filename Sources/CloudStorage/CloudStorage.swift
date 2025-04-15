@@ -251,3 +251,31 @@ extension CloudStorage {
             syncSet: { newValue in sync.set(newValue, for: key) })
     }
 }
+
+extension CloudStorage where Value: Codable {
+    public init(wrappedValue: Value, _ key: String) {
+        self.init(
+            keyName: key,
+            syncGet: {
+                guard let data = sync.data(for: key) else {
+                    return wrappedValue
+                }
+                do {
+                    let value = try JSONDecoder().decode(Value.self, from: data)
+                    return value
+                } catch {
+                    assertionFailure(error.localizedDescription)
+                    return wrappedValue
+                }
+            },
+            syncSet: { newValue in
+                do {
+                    let data = try JSONEncoder().encode(newValue)
+                    sync.set(data, for: key)
+                } catch {
+                    assertionFailure(error.localizedDescription)
+                }
+            }
+        )
+    }
+}
